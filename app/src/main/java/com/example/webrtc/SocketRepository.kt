@@ -17,7 +17,7 @@ class SocketRepository(private val messageInterface: NewMessageInterface) {
     fun initSocket(username:String){
         userName= username
         //if you are using android emulator your local websocket address is going to be "ws://10.0.2.2:3000"
-        //if you are using your phone as emulator your local address, use cmd and then write ipconfig- "ws://192.168.1.5:3000"
+        //if you are using your phone as emulator your local address, use cmd and then write ipconfig- "ws://192.168.1.4:3000"
         //but if your websocket is deployed you add your websocket address here
         webSocket=object :WebSocketClient(URI("ws://192.168.1.4:3000")){
             override fun onOpen(handshakedata: ServerHandshake?) {
