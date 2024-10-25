@@ -30,7 +30,8 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
     private var isMute = false
     private var isCameraPause = false
     private val rtcAudioManager by lazy { RTCAudioManager.create(this) }
-    private var isSpeakerMode = true
+    private var isSpeakerMode = false
+    private var isAudioCall = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,7 +44,6 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
             insets
         }
         init()
-
 
     }
 
@@ -66,7 +66,7 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
                     )
                     socketRepository?.sendMessageToSocket(
                         MessageModel(
-                            "ice_candidate", userName, target, candidate
+                            "ice_candidate", userName, target, candidate,isAudioCall
                         )
                     )
 
@@ -74,16 +74,33 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
 
                 override fun onAddStream(p0: MediaStream?) {
                     super.onAddStream(p0)
-                    p0?.videoTracks?.get(0)?.addSink(binding.remoteView)
+                    Log.d("RTCclinetadd",isAudioCall.toString())
+                    if (!isAudioCall) {
+                        p0?.videoTracks?.get(0)?.addSink(binding.remoteView)
+                    }else {
+                        p0?.audioTracks?.get(0)?.setEnabled(true)
+                    }
                 }
             })
         rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
 
         binding.apply {
             callBtn.setOnClickListener {
+                isAudioCall=false
+                Log.d("RTCclientvid", "isAudioCall set to: $isAudioCall")
                 socketRepository?.sendMessageToSocket(
                     MessageModel(
-                        "start_call", userName, targetUserNameEt.text.toString(), null
+                        "start_call", userName, targetUserNameEt.text.toString(),null, isAudioCall
+                    )
+                )
+                target = targetUserNameEt.text.toString()
+            }
+            audBtn.setOnClickListener {
+                isAudioCall=true
+                Log.d("RTCclientaud", "isAudioCall set to: $isAudioCall")
+                socketRepository?.sendMessageToSocket(
+                    MessageModel(
+                        "start_call", userName, targetUserNameEt.text.toString(), null,isAudioCall
                     )
                 )
                 target = targetUserNameEt.text.toString()
@@ -100,6 +117,17 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
                     micButton.setImageResource(R.drawable.baseline_mic_24)
                 }
                 rtcClient?.toggleAudio(isMute)
+            }
+            audMicButton.setOnClickListener {
+                if (isMute) {
+                    isMute = false
+                    audMicButton.setImageResource(R.drawable.baseline_mic_off_24)
+                } else {
+                    isMute = true
+                    audMicButton.setImageResource(R.drawable.baseline_mic_24)
+                }
+                rtcClient?.toggleAudio(isMute)
+
             }
             videoButton.setOnClickListener {
                 if (isCameraPause) {
@@ -123,7 +151,25 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
                 }
 
             }
+            audAudioOutputButton.setOnClickListener {
+                if (isSpeakerMode) {
+                    isSpeakerMode = false
+                    audAudioOutputButton.setImageResource(R.drawable.baseline_volume_off_24)
+                    rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.EARPIECE)
+                } else {
+                    isSpeakerMode = true
+                    audAudioOutputButton.setImageResource(R.drawable.baseline_speaker)
+                    rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
+                }
+
+            }
             endCallButton.setOnClickListener {
+                setCallLayoutGone()
+                setWhoToCallLayoutVisible()
+                setIncomingCallLayoutGone()
+                rtcClient?.endCall()
+            }
+            audEndCallButton.setOnClickListener {
                 setCallLayoutGone()
                 setWhoToCallLayoutVisible()
                 setIncomingCallLayoutGone()
@@ -133,7 +179,7 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
     }
 
     override fun onNewMessage(message: MessageModel) {
-        Log.d(TAG, "onNewMessage:$message")
+        Log.d("RTCclinetmsg", "onNewMessage:$message")
         when (message.type) {
             "call_response" -> {
                 if (message.data == "user is not online") {
@@ -143,16 +189,24 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
                     }
                 } else {
                     //ready for call
+                    //val calltype = message.callType.toString()
+                    //isAudioCall = calltype == "audio"
+                    Log.d("RTCclinetact",isAudioCall.toString())
                     runOnUiThread {
                         setWhoToCallLayoutGone()
                         setCallLayoutVisible()
-                        binding.apply {
-                            rtcClient?.initSurfaceView(localView)
-                            rtcClient?.initSurfaceView(remoteView)
-                            rtcClient?.startLocalVideo(localView)
-                            rtcClient?.call(targetUserNameEt.text.toString())
+                        if (!isAudioCall) {
+                            binding.apply {
+                                rtcClient?.initSurfaceView(localView)
+                                rtcClient?.initSurfaceView(remoteView)
+                                rtcClient?.startLocalVideo(localView)
+                            }
                         }
-
+                            binding.apply {
+                                rtcClient?.call(targetUserNameEt.text.toString(),isAudioCall)
+                                binding.remoteViewLoading.visibility = View.GONE
+                                binding.audremoteViewLoading.visibility= View.GONE
+                            }
                     }
                 }
             }
@@ -164,9 +218,10 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
                 )
                 rtcClient?.onRemoteSessionReceived(session)
                 runOnUiThread {
+                    setCallLayoutVisible()
                     binding.remoteViewLoading.visibility = View.GONE
+                    binding.audremoteViewLoading.visibility= View.GONE
                 }
-
             }
 
             "offer_received" -> {
@@ -174,23 +229,27 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
                     setIncomingCallLayoutVisible()
                     binding.incomingNameTv.text = "${message.name.toString()} is calling you"
                     binding.acceptButton.setOnClickListener {
+//                        isAudioCall = message.callType == "audio"
+                        Log.d("RTCclinetact",isAudioCall.toString())
                         setIncomingCallLayoutGone()
                         setCallLayoutVisible()
                         setWhoToCallLayoutGone()
-                        binding.apply {
-                            rtcClient?.initSurfaceView(localView)
-                            rtcClient?.initSurfaceView(remoteView)
-                            rtcClient?.startLocalVideo(localView)
+                        if (!isAudioCall) {
+                            binding.apply {
+                                rtcClient?.initSurfaceView(localView)
+                                rtcClient?.initSurfaceView(remoteView)
+                                rtcClient?.startLocalVideo(localView)
+                            }
                         }
                         val session = SessionDescription(
                             SessionDescription.Type.OFFER,
                             message.data.toString()
                         )
                         rtcClient?.onRemoteSessionReceived(session)
-                        rtcClient?.answer(message.name!!)
+                        rtcClient?.answer(message.name!!,isAudioCall)
                         target = message.name!!
                         binding.remoteViewLoading.visibility = View.GONE
-
+                        binding.audremoteViewLoading.visibility= View.GONE
                     }
                     binding.rejectButton.setOnClickListener {
                         setIncomingCallLayoutGone()
@@ -216,7 +275,6 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
                 }
             }
         }
-
     }
 
     private fun setIncomingCallLayoutGone() {
@@ -228,11 +286,21 @@ class CallActivity : AppCompatActivity(), NewMessageInterface {
     }
 
     private fun setCallLayoutGone() {
-        binding.callLayout.visibility = View.GONE
+        //binding.callLayout.visibility = View.GONE
+        if (isAudioCall) {
+            binding.audcallLayout.visibility = View.GONE
+        } else {
+            binding.callLayout.visibility = View.GONE
+        }
     }
 
     private fun setCallLayoutVisible() {
-        binding.callLayout.visibility = View.VISIBLE
+        //binding.callLayout.visibility = View.VISIBLE
+        if (isAudioCall) {
+            binding.audcallLayout.visibility = View.VISIBLE
+        } else {
+            binding.callLayout.visibility = View.VISIBLE
+        }
     }
 
     private fun setWhoToCallLayoutGone() {

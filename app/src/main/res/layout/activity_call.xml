@@ -54,6 +54,14 @@
             android:layout_marginHorizontal="30dp"
             android:text="call"
             android:id="@+id/callBtn" />
+        <androidx.appcompat.widget.AppCompatButton
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="20dp"
+            android:layout_below="@id/callBtn"
+            android:layout_marginHorizontal="30dp"
+            android:text="audcall"
+            android:id="@+id/audBtn" />
     </RelativeLayout>
     <RelativeLayout
         android:layout_width="match_parent"
@@ -79,8 +87,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:indeterminate="true"
-            android:layout_centerInParent="true"
-            />
+            android:layout_centerInParent="true" />
+
         <LinearLayout
             android:gravity="center"
             android:background="@drawable/curve_background"
@@ -138,6 +146,73 @@
 
             <ImageView
                 android:id="@+id/audio_output_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                android:background="@drawable/circle_background"
+                android:backgroundTint="@color/cardview_dark_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="12dp"
+                android:src="@drawable/baseline_speaker" />
+        </LinearLayout>
+    </RelativeLayout>
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:id="@+id/audcallLayout" >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="20sp"
+            android:textColor="@color/black"
+            android:text="someone calling"
+            android:id="@+id/audincomingNameTv"
+            android:layout_centerInParent="true"  />
+        <ProgressBar
+            android:id="@+id/audremote_view_loading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:indeterminate="true"
+            android:layout_centerInParent="true" />
+
+        <LinearLayout
+            android:gravity="center"
+            android:background="@drawable/curve_background"
+            android:backgroundTint="@android:color/secondary_text_light"
+            android:id="@+id/audcontrols"
+            android:orientation="horizontal"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <ImageView
+                android:id="@+id/aud_mic_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="12dp"
+                android:background="@drawable/circle_background"
+                android:backgroundTint="@color/cardview_dark_background"
+                android:src="@drawable/baseline_mic_24" />
+
+            <ImageView
+                android:id="@+id/aud_end_call_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="12dp"
+                android:background="@drawable/circle_background"
+                android:backgroundTint="@android:color/holo_red_dark"
+                android:src="@drawable/baseline_call_end_24" />
+            <ImageView
+                android:id="@+id/aud_audio_output_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"

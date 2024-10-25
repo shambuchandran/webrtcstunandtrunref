@@ -1,6 +1,7 @@
 package com.example.webrtc
 
 import android.app.Application
+import android.util.Log
 import com.example.webrtc.models.MessageModel
 import org.webrtc.AudioTrack
 import org.webrtc.Camera2Enumerator
@@ -99,13 +100,18 @@ class RTCClient(
         localVideoTrack =
             peerConnectionFactory.createVideoTrack("local_video_track", localVideoSource)
         localVideoTrack?.addSink(surfaceViewRenderer)
-        localAudioTrack =
-            peerConnectionFactory.createAudioTrack("local_audio_track", localAudioSource)
+        localAudioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", localAudioSource)
         val localStream = peerConnectionFactory.createLocalMediaStream("local_stream")
         localStream.addTrack(localVideoTrack)
         localStream.addTrack(localAudioTrack)
         peerConnection?.addStream(localStream)
 
+    }
+    fun startLocalAudio() {
+        localAudioTrack = peerConnectionFactory.createAudioTrack("local_audio_track", localAudioSource)
+        val localStream = peerConnectionFactory.createLocalMediaStream("local_audio_stream")
+        localStream.addTrack(localAudioTrack)
+        peerConnection?.addStream(localStream)
     }
 
     private fun getVideoCapturer(application: Application): CameraVideoCapturer {
@@ -118,9 +124,17 @@ class RTCClient(
         }
     }
 
-    fun call(target: String) {
+    fun call(target: String,isAudioCall: Boolean) {
+        Log.d("RTCclinetcall",isAudioCall.toString())
         val mediaConstraints = MediaConstraints()
-        mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        if (isAudioCall) {
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
+            startLocalAudio()
+        } else {
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        }
         peerConnection?.createOffer(object : SdpObserver {
             override fun onCreateSuccess(desc: SessionDescription?) {
                 peerConnection?.setLocalDescription(object : SdpObserver {
@@ -135,7 +149,7 @@ class RTCClient(
                         )
                         socketRepository.sendMessageToSocket(
                             MessageModel(
-                                "create_offer", userName, target, offer
+                                "create_offer", userName, target, offer,isAudioCall
                             )
                         )
                     }
@@ -191,9 +205,17 @@ class RTCClient(
 
     }
 
-    fun answer(target: String) {
-        val constraints = MediaConstraints()
-        constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceivedVideo", "true"))
+    fun answer(target: String,isAudioCall:Boolean) {
+        Log.d("RTCclinetans",isAudioCall.toString())
+        val mediaConstraints = MediaConstraints()
+        if (isAudioCall) {
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
+            startLocalAudio()
+        } else {
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+            mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        }
         peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(desc: SessionDescription?) {
                 peerConnection?.setLocalDescription(object : SdpObserver {
@@ -209,7 +231,7 @@ class RTCClient(
                         )
                         socketRepository.sendMessageToSocket(
                             MessageModel(
-                                "create_answer", userName, target, answer
+                                "create_answer", userName, target, answer,isAudioCall
                             )
                         )
                     }
@@ -237,7 +259,7 @@ class RTCClient(
 
             }
 
-        }, constraints)
+        }, mediaConstraints)
 
     }
 
